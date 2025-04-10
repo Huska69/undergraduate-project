@@ -6,6 +6,7 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
 model User {
   id           String    @id @default(auto()) @map("_id") @db.ObjectId
   email        String    @unique
@@ -21,4 +22,24 @@ model User {
   allergies    String?   // Optional
   medCond      String?   // Optional
   meds         String?   // Optional
+  chats        Chat[]    // Relation to Chat model
+}
+
+model Chat {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  title     String    @default("New Conversation")
+  userId    String    @db.ObjectId
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  chatId    String   @db.ObjectId
+  content   String
+  role      String   // "user" or "assistant"
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }
