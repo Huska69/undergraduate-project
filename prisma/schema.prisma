@@ -6,23 +6,23 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
-
+// schema.prisma
 model User {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  email        String    @unique
-  password     String    // Required for signup
-  name         String?   // Optional
-  age          Int?      // Optional
-  sex          String?   // Optional
-  pregnancy    Boolean?  // Optional
-  height       Int?      // Optional
-  weight       Int?      // Optional
-  contact      Int?      // Optional
-  blood        String?   // Optional
-  allergies    String?   // Optional
-  medCond      String?   // Optional
-  meds         String?   // Optional
-  chats        Chat[]    // Relation to Chat model
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  email     String  @unique
+  password  String
+  name      String
+  age       Int?    // 👈 Optional
+  sex       String
+  pregnancy Boolean?
+  height    Int?
+  weight    Int?
+  contact   Int?
+  blood     String?
+  allergies String?
+  medCond   String?
+  meds      String?
+  chats Chat[]
 }
 
 model Chat {

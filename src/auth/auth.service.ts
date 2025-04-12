@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcryptjs';
+import { SignUpDto } from './dto/signup.dto';
 
 @Injectable()
 export class AuthService {
@@ -26,38 +27,26 @@ export class AuthService {
     };
   }
 
-  async signUp(data: {
-    name: string;
-    age: number;
-    sex: string;
-    pregnancy?: boolean;
-    height: number;
-    weight: number;
-    contact: number;
-    blood: string;
-    allergies: string;
-    medCond: string;
-    meds: string;
-    email: string;
-    password: string;
-  }) {
-    //check if user already exists
-    const existingUser = await this.usersService.findByEmail(data.email);
+    // auth.service.ts
+  async signUp(signUpDto: SignUpDto) {
+    // Check if user exists
+    const existingUser = await this.usersService.findByEmail(signUpDto.email);
     if (existingUser) {
-      throw new UnauthorizedException('User with this email already exists')
+      throw new ConflictException('User with this email already exists');
     }
 
-    //Hash the password 
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
 
-    //create user with hashed password
+    // Create user (exclude confirmPassword)
+    const { confirmPassword, ...userData} = signUpDto;
     const user = await this.usersService.create({
-      ...data,
+      ...userData,
       password: hashedPassword,
     });
 
-    //remove password from response
-    const {password, ...result } = user;
-    return result; 
+    // Remove password from response
+    const { password, ...result } = user;
+    return result;
   }
 }

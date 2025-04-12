@@ -16,25 +16,25 @@ export class UsersService {
   }
     //this method should not be used directly for user registration.
     //IT SHOULD ONLY BE USED BY THE AUTHSERVICE FRRR
+    // users.service.ts
     async create(data: { 
         name: string; 
-        age: number; 
+        age?: number; // 👈 Make optional
         sex: string; 
         pregnancy?: boolean; 
-        height: number; 
-        weight: number; 
-        contact: number; 
-        blood: string; 
-        allergies: string; 
-        medCond: string; 
-        meds: string; 
+        height?: number; // 👈 Make optional
+        weight?: number; // 👈 Make optional
+        contact?: number; // 👈 Make optional
+        blood?: string; // 👈 Make optional
+        allergies?: string; // 👈 Make optional
+        medCond?: string; // 👈 Make optional
+        meds?: string; // 👈 Make optional
         email: string; 
         password: string; 
     }) {
-        //hashing should happen in AuthService
         return this.prisma.user.create({ data });
     }
-
+    
     async findOne(id: string) {
         return this.prisma.user.findUnique({ where: { id } });
     } 
