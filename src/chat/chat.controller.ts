@@ -11,17 +11,25 @@ export class ChatController {
 
   @Post()
   async createChat(@Request() req, @Body() dto: CreateChatDto) {
-    return this.chatService.createChat(req.user.id, dto);
+    return this.chatService.createChat(req.user.userId, dto);
+  }
+
+  @Post('health-assistant')
+  async createHealthAssistantChat(@Request() req) {
+    const dto = new CreateChatDto();
+    dto.isHealthAssistant = true;
+    dto.title = 'Health Assistant';
+    return this.chatService.createChat(req.user.userId, dto);
   }
 
   @Get()
   async getChats(@Request() req) {
-    return this.chatService.getChats(req.user.id);
+    return this.chatService.getChats(req.user.userId);
   }
 
   @Get(':id')
   async getChat(@Param('id') id: string, @Request() req) {
-    return this.chatService.getChat(id, req.user.id);
+    return this.chatService.getChat(id, req.user.userId);
   }
 
   @Post(':id/messages')
@@ -30,11 +38,11 @@ export class ChatController {
     @Request() req,
     @Body() dto: CreateMessageDto,
   ) {
-    return this.chatService.sendMessage(id, req.user.id, dto);
+    return this.chatService.sendMessage(id, req.user.userId, dto);
   }
 
   @Delete(':id')
   async deleteChat(@Param('id') id: string, @Request() req) {
-    return this.chatService.deleteChat(id, req.user.id);
+    return this.chatService.deleteChat(id, req.user.userId);
   }
 }

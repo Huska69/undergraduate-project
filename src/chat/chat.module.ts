@@ -10,4 +10,4 @@ import { ConfigModule } from '@nestjs/config';
   controllers: [ChatController],
   providers: [ChatService, OpenAIService],
 })
-export class ChatModule {} 
+export class ChatModule {}

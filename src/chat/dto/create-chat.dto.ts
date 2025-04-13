@@ -1,3 +1,11 @@
+import { IsOptional, IsString, IsBoolean } from 'class-validator';
+
 export class CreateChatDto {
-    title?: string;
-  }
+  @IsString()
+  @IsOptional()
+  title?: string;
+  
+  @IsBoolean()
+  @IsOptional()
+  isHealthAssistant?: boolean;
+}
