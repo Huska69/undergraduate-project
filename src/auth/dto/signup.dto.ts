@@ -15,7 +15,13 @@ export class SignUpDto {
   confirmPassword: string;
 
   @IsString()
-  name: string;
+  firstName: string;
+
+  @IsString()
+  lastName: string;
+
+  @IsString()
+  nationality: string;
 
   @IsNumber()
   @IsOptional() // 👈 Make age optional

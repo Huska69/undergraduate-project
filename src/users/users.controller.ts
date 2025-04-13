@@ -40,21 +40,23 @@ export class UsersController {
   async update(
     @Param('id') id: string,
     @Body()
-    data: {
-      name?: string;
-      age?: number;
-      sex?: string;
+    data: { 
+      firstName: string;
+      lastName: string;
+      nationality: string;
+      age?: number; // 👈 Make optional
+      sex: string;
       pregnancy?: boolean;
-      height?: number;
-      weight?: number;
-      contact?: number;
-      blood?: string;
-      allergies?: string;
-      medCond?: string;
-      meds?: string;
-      email?: string;
-      password?: string;
-    },
+      height?: number; // 👈 Make optional
+      weight?: number; // 👈 Make optional
+      contact?: number; // 👈 Make optional
+      blood?: string; // 👈 Make optional
+      allergies?: string; // 👈 Make optional
+      medCond?: string; // 👈 Make optional
+      meds?: string; // 👈 Make optional
+      email: string;
+      password: string;
+  },
   ) {
     return this.usersService.update(id, data)
   }
