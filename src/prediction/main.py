@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import logging
 from typing import List, Dict, Any, Optional
-from glucose_model import GlucoseLSTM
+from gLmodel import GlucoseLSTM
 import os
 import time
 
@@ -51,11 +51,11 @@ def get_model():
     return model
 
 class PredictRequest(BaseModel):
-    x_seq: conlist(float, min_items=36, max_items=36) = Field(
-        ..., description="36 historical glucose readings"
+    x_seq: List[float] = Field(
+        ..., description="36 historical glucose readings", min_items=36, max_items=36
     )
-    x_static: conlist(float, min_items=5, max_items=5) = Field(
-        ..., description="5 static patient features"
+    x_static: List[float] = Field(
+        ..., description="5 static patient features", min_items=5, max_items=5
     )
     user_id: str = Field(..., description="User identifier")
 

@@ -21,7 +21,7 @@ import {
 @ApiTags('predictions')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('predictions')
+@Controller('predictions') // http://localhost:3000/predictions
 export class PredictionsController {
   constructor(private readonly service: PredictionsService) {}
 
