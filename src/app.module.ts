@@ -5,13 +5,15 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ChatModule } from './chat/chat.module';
+import { GlucoseModule } from './glucose/glucose.module';
 
 @Module({
   imports: [
     PrismaModule,
     UsersModule,
     AuthModule,
-    ChatModule
+    ChatModule,
+    GlucoseModule
   ],
   controllers: [AppController],
   providers: [AppService],
