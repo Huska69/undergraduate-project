@@ -87,7 +87,6 @@ def predict(data: PredictRequest, model=Depends(get_model)):
         # Input validation (additional checks beyond Pydantic)
         if any(not np.isfinite(x) for x in data.x_seq):
             raise HTTPException(status_code=400, detail="Input sequence contains invalid values")
-            
         if any(not np.isfinite(x) for x in data.x_static):
             raise HTTPException(status_code=400, detail="Static features contain invalid values")
         
