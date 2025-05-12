@@ -5,339 +5,164 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WiFiClientSecure.h>
 #include <math.h>
 
-#define SCREEN_WIDTH  128
-#define SCREEN_HEIGHT  64
-#define OLED_SDA        8
-#define OLED_SCL        9
-#define NIR_LED_PIN     4
+#define SCREEN_WIDTH   128
+#define SCREEN_HEIGHT   64
+#define OLED_SDA         8
+#define OLED_SCL         9
+#define NIR_LED_PIN      4
 
-#define STABLE_COUNT    5
-#define THRESHOLD      10.0  // mg/dL
+#define NUM_READINGS     5
+#define STABILITY_THRESH 10.0   // mg/dL
 
-// WiFi credentials
-const char* ssid = "No39-spring";
-const char* password = "99999999";
+// Wi-Fi & Backend
+const char* ssid       = "iphone";
+const char* password   = "910110128";
+const char* apiBaseUrl = "https://undergraduate-project-ry8h.onrender.com";
+const char* userEmail  = "huslen.0922@gmail.com";
+const char* userPass   = "Khuslen.0922";
+String jwtToken;
 
-// API settings
-const char* apiBaseUrl = "http://192.168.1.116:3000"; // Replace with your actual API URL
-String jwtToken = "";
-String userId = ""; // Will store the user ID after login
-
-// Display and sensor initialization
+// I²C and displays
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-Adafruit_ADS1115 ads;
+Adafruit_ADS1115   ads;
+WiFiClientSecure   wifiClient;
+HTTPClient         http;
 
-// Convert analog reading to glucose value (mg/dL)
+// Calibration curve
 double analogToGlucose(double x) {
-  return 3e-5*x*x + 0.2903*x - 4.798;
+  return 3e-5 * x * x + 0.2903 * x - 4.798;
 }
 
-// Function to connect to WiFi
-void connectToWiFi() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.print("Connecting to WiFi");
-  display.display();
-  
+// Wi-Fi connect
+void connectWiFi() {
   WiFi.begin(ssid, password);
-  int attempts = 0;
-  
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    display.print(".");
-    display.display();
-    attempts++;
-  }
-  
-  if (WiFi.status() == WL_CONNECTED) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("WiFi Connected!");
-    display.setCursor(0, 16);
-    display.print(WiFi.localIP().toString());
-    display.display();
-    delay(2000);
-  } else {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("WiFi Failed!");
-    display.display();
-    delay(2000);
-  }
+  while (WiFi.status() != WL_CONNECTED) delay(500);
 }
 
-// Function to log in and get JWT token
-bool loginUser(const char* email, const char* password) {
-  if (WiFi.status() != WL_CONNECTED) {
-    return false;
-  }
-  
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.print("Logging in...");
-  display.display();
-  
-  HTTPClient http;
-  http.begin(String(apiBaseUrl) + "/auth/login");
+// Login and obtain JWT
+bool login() {
+  http.begin(wifiClient, String(apiBaseUrl) + "/auth/login");
   http.addHeader("Content-Type", "application/json");
-  
-  // Create JSON payload
-  StaticJsonDocument<200> doc;
-  doc["email"] = email;
-  doc["password"] = password;
-  
-  String requestBody;
-  serializeJson(doc, requestBody);
-  
-  int httpResponseCode = http.POST(requestBody);
-  
-  if (httpResponseCode == 200) {
-    String response = http.getString();
-    
-    // Parse response to get token
-    StaticJsonDocument<512> responseDoc;
-    DeserializationError error = deserializeJson(responseDoc, response);
-    
-    if (!error) {
-      const char* token = responseDoc["access_token"];
-      if (token) {
-        jwtToken = token;
-        
-        // Get user ID from decoded JWT (simplified - in production you might need to decode JWT)
-        userId = responseDoc["userId"].as<String>();
-        if (!userId) {
-          // Alternative: make a separate API call to get user profile
-          // This is just a placeholder for getting the userId
-          userId = "user-id-placeholder";
-        }
-        
-        display.clearDisplay();
-        display.setCursor(0, 0);
-        display.print("Login successful!");
-        display.display();
-        delay(1000);
-        return true;
-      }
-    }
-  }
-  
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.print("Login failed: ");
-  display.print(httpResponseCode);
-  display.display();
-  delay(2000);
-  
-  http.end();
-  return false;
-}
-
-// Function to send glucose data to the API
-bool sendGlucoseData(double glucoseValue) {
-  if (WiFi.status() != WL_CONNECTED || userId.length() == 0) {
-    return false;
-  }
-  
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.print("Sending data...");
-  display.display();
-  
-  HTTPClient http;
-  http.begin(String(apiBaseUrl) + "/api/glucose");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Authorization", "Bearer " + String(jwtToken));
-  
-  // Create JSON payload
-  StaticJsonDocument<256> doc;
-  doc["userId"] = userId;
-  doc["value"] = glucoseValue;
-  doc["timestamp"] = millis(); // You might want to use actual timestamp if available
-  
-  String requestBody;
-  serializeJson(doc, requestBody);
-  
-  int httpResponseCode = http.POST(requestBody);
-  
-  if (httpResponseCode >= 200 && httpResponseCode < 300) {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("Data sent!");
-    display.display();
-    delay(1000);
+  StaticJsonDocument<200> req;
+  req["email"] = userEmail;
+  req["password"] = userPass;
+  String body; serializeJson(req, body);
+  int code = http.POST(body);
+  if (code == 200 || code == 201) {
+    StaticJsonDocument<512> res;
+    deserializeJson(res, http.getString());
+    jwtToken = res["access_token"].as<String>();
     http.end();
     return true;
-  } else {
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    display.print("Send failed: ");
-    display.print(httpResponseCode);
-    display.display();
-    delay(2000);
-    http.end();
-    return false;
   }
-}
-
-// Function to get glucose predictions
-bool getGlucosePrediction() {
-  if (WiFi.status() != WL_CONNECTED || userId.length() == 0) {
-    return false;
-  }
-  
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  display.print("Getting prediction...");
-  display.display();
-  
-  HTTPClient http;
-  http.begin(String(apiBaseUrl) + "/predictions/" + userId + "?limit=1");
-  http.addHeader("Authorization", "Bearer " + String(jwtToken));
-  
-  int httpResponseCode = http.GET();
-  
-  if (httpResponseCode >= 200 && httpResponseCode < 300) {
-    String response = http.getString();
-    
-    // Parse the prediction response
-    StaticJsonDocument<1024> responseDoc;
-    DeserializationError error = deserializeJson(responseDoc, response);
-    
-    if (!error && responseDoc.is<JsonArray>() && responseDoc.size() > 0) {
-      JsonArray values = responseDoc[0]["values"].as<JsonArray>();
-      
-      display.clearDisplay();
-      display.setTextSize(1);
-      display.setCursor(0, 0);
-      display.print("Predicted (mg/dL):");
-      display.setCursor(0, 16);
-      
-      // Display predictions (up to 3)
-      int count = 0;
-      for (JsonVariant value : values) {
-        if (count < 3) { // Show first 3 predictions
-          display.print("+");
-          display.print(count+1);
-          display.print("h: ");
-          display.print(value.as<float>(), 1);
-          display.print(" ");
-          count++;
-        }
-      }
-      
-      display.display();
-      delay(5000);
-      http.end();
-      return true;
-    }
-  }
-  
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.print("Prediction failed: ");
-  display.print(httpResponseCode);
-  display.display();
-  delay(2000);
-  
   http.end();
   return false;
 }
 
-void setup() {
-  Serial.begin(115200);
-  
-  // Initialize peripherals
-  Wire.begin(OLED_SDA, OLED_SCL);
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.clearDisplay();
-  display.setTextColor(SSD1306_WHITE);
-  display.display();
-  
-  ads.begin();
-  pinMode(NIR_LED_PIN, OUTPUT);
-  
-  // Connect to WiFi
-  connectToWiFi();
-  
-  // Log in to get token (replace with actual credentials)
-  loginUser("huslen.0922@gmail.com", "Khuslen.0922");
+// Send glucose reading
+bool sendGlucoseReading(double value) {
+  http.begin(wifiClient, String(apiBaseUrl) + "/glucose");
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + jwtToken);
+  StaticJsonDocument<128> doc;
+  doc["value"] = value;
+  String body; serializeJson(doc, body);
+  int code = http.POST(body);
+  http.end();
+  if (code == 401 && login())
+    return sendGlucoseReading(value);
+  return (code == 200 || code == 201);
 }
 
-void loop() {
-  const char spinner[] = "|/-\\";
-  double window[STABLE_COUNT];
-  int count=0, idx=0, spin=0;
-  double mn, mx;
+// Read one raw differential value
+int16_t readDiff() {
+  digitalWrite(NIR_LED_PIN, HIGH);
+  delay(50);
+  int16_t on  = ads.readADC_SingleEnded(0);
+  digitalWrite(NIR_LED_PIN, LOW);
+  delay(50);
+  int16_t off = ads.readADC_SingleEnded(0);
+  int16_t diff = on - off;
+  return (diff > 0 ? diff : 0);
+}
 
-  // Take multiple readings until stable
+// Measure stable glucose
+double measureGlucose() {
+  double readings[NUM_READINGS];
+  int count = 0, idx = 0;
+  char spinner[] = "|/-\\";
+  int spin = 0;
   while (true) {
-    digitalWrite(NIR_LED_PIN, HIGH);
-    delay(20);
-    int16_t raw = ads.readADC_SingleEnded(0);
-    digitalWrite(NIR_LED_PIN, LOW);
-
+    int16_t raw = readDiff();
     double glu = analogToGlucose(raw);
+    readings[idx] = glu;
+    if (count < NUM_READINGS) count++;
+    idx = (idx + 1) % NUM_READINGS;
 
+    // show spinner
     display.clearDisplay();
     display.setTextSize(1);
     display.setCursor(0,0);
     display.print("Measuring ");
     display.print(spinner[spin]);
     display.display();
+    spin = (spin + 1) & 3;
 
-    spin = (spin+1)&3;
-    if (count<STABLE_COUNT) count++;
-    window[idx] = glu;
-    idx = (idx+1)%STABLE_COUNT;
-
-    if (count==STABLE_COUNT) {
-      mn = mx = window[0];
-      for (int i=1;i<STABLE_COUNT;i++) {
-        if (window[i]<mn) mn=window[i];
-        if (window[i]>mx) mx=window[i];
+    if (count == NUM_READINGS) {
+      double mn = readings[0], mx = readings[0];
+      for (int i = 1; i < NUM_READINGS; i++) {
+        mn = min(mn, readings[i]);
+        mx = max(mx, readings[i]);
       }
-      if (mx-mn <= THRESHOLD) break;
+      if (mx - mn <= STABILITY_THRESH) break;
     }
-    delay(200);
+    delay(300);
   }
+  // average stable readings
+  double sum = 0;
+  for (int i = 0; i < NUM_READINGS; i++) sum += readings[i];
+  return sum / NUM_READINGS;
+}
 
-  // Calculate average glucose reading
-  double sum=0;
-  for (int i=0;i<STABLE_COUNT;i++) sum += window[i];
-  double result = sum / STABLE_COUNT;
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(OLED_SDA, OLED_SCL);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.setTextColor(SSD1306_WHITE);
+  ads.begin();
+  pinMode(NIR_LED_PIN, OUTPUT);
 
-  // Display the result
+  connectWiFi();
+  login();
+}
+
+void loop() {
+  double glucose = measureGlucose();
+
+  // display result
   display.clearDisplay();
   display.setTextSize(1);
   display.setCursor(0,0);
-  display.print("Current Glu:");
+  display.print("Current Glucose:");
   display.setTextSize(2);
   display.setCursor(0,16);
-  display.print(result,1);
+  display.print(glucose,1);
   display.print(" mg/dL");
   display.display();
 
+  // serial log
   Serial.print("Glucose: ");
-  Serial.print(result,1);
+  Serial.print(glucose,1);
   Serial.println(" mg/dL");
 
-  // Send data to server if connected
-  if (WiFi.status() == WL_CONNECTED && userId.length() > 0) {
-    sendGlucoseData(result);
-    getGlucosePrediction();
+  // send to backend
+  if (sendGlucoseReading(glucose)) {
+    Serial.println("Sent successfully");
   } else {
-    delay(3000);
-    // Try to reconnect
-    connectToWiFi();
-    if (WiFi.status() == WL_CONNECTED && userId.length() == 0) {
-      loginUser("huslen.0922@gmail.com", "Khuslen.0922");
-    }
+    Serial.println("Send failed");
   }
 
   delay(5000);
