@@ -36,7 +36,7 @@
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.7",
     "mongodb": "^6.15.0",
-    "mongoose": "^8.13.2",
+    "mongoose": "^8.14.0",
     "openai": "^4.93.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

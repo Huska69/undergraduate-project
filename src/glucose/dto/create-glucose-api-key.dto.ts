@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
-export class CreateGlucoseDto {
+export class CreateGlucoseApiKeyDto {
   @IsString()
   @IsNotEmpty()
-  userId: string;
+  apiKey: string; // API key for device authentication
 
   @IsNumber()
   @IsNotEmpty()
