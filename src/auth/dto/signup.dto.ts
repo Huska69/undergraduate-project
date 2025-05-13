@@ -32,7 +32,7 @@ export class SignUpDto {
 
   @IsString()
   @IsOptional() // 👈 Make pregnancy optional
-  pregnancy?: String;
+  pregnancy?: string;
 
   // Make these fields optional
   @IsNumber()
