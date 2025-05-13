@@ -24,7 +24,7 @@ export class UsersService {
         nationality: string;
         age?: number; // 👈 Make optional
         sex: string;
-        pregnancy?: boolean;
+        pregnancy?: string;
         height?: number; // 👈 Make optional
         weight?: number; // 👈 Make optional
         contact?: number; // 👈 Make optional
@@ -52,7 +52,7 @@ export class UsersService {
         nationality: string;
         age?: number; // 👈  optional
         sex: string;
-        pregnancy?: boolean;
+        pregnancy?: string;
         height?: number; // 👈  optional
         weight?: number; // 👈  optional
         contact?: number; // 👈  optional

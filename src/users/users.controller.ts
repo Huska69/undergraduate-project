@@ -46,7 +46,7 @@ export class UsersController {
       nationality: string;
       age?: number; // 👈 Make optional
       sex: string;
-      pregnancy?: boolean;
+      pregnancy?: string;
       height?: number; // 👈 Make optional
       weight?: number; // 👈 Make optional
       contact?: number; // 👈 Make optional

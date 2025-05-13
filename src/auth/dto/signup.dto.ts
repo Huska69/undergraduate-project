@@ -1,5 +1,5 @@
 // signup.dto.ts
-import { IsOptional, IsEmail, IsString, MinLength, IsNumber, IsBoolean, Validate } from 'class-validator';
+import { IsOptional, IsEmail, IsString, MinLength, IsNumber, Validate } from 'class-validator';
 import { Match } from './match.decorator';
 
 export class SignUpDto {
@@ -30,9 +30,9 @@ export class SignUpDto {
   @IsString()
   sex: string;
 
-  @IsBoolean()
+  @IsString()
   @IsOptional() // 👈 Make pregnancy optional
-  pregnancy?: boolean;
+  pregnancy?: String;
 
   // Make these fields optional
   @IsNumber()
