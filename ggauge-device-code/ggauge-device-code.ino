@@ -16,16 +16,17 @@
 
 #define NUM_READINGS     5
 #define STABILITY_THRESH 10.0   // mg/dL
+#define SEND_INTERVAL  10000    // 10 seconds
 
 // Wi-Fi & Backend
-const char* ssid       = "iphone";
-const char* password   = "910110128";
+const char* ssid       = "YOUR_WIFI_SSID";
+const char* password   = "YOUR_WIFI_PASSWORD";
 const char* apiBaseUrl = "https://undergraduate-project-ry8h.onrender.com";
-const char* userEmail  = "huslen.0922@gmail.com";
-const char* userPass   = "Khuslen.0922";
+const char* userEmail  = "your_user_email@example.com";
+const char* userPass   = "your_user_password";
 String jwtToken;
 
-// I²C and displays
+// I²C, Display, ADC, HTTP
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 Adafruit_ADS1115   ads;
 WiFiClientSecure   wifiClient;
@@ -36,21 +37,28 @@ double analogToGlucose(double x) {
   return 3e-5 * x * x + 0.2903 * x - 4.798;
 }
 
-// Wi-Fi connect
+// --- forward declarations ---
+bool sendGlucoseReading(double value);
+void connectWiFi();
+bool login();
+int16_t readDiff();
+double measureGlucose();
+
+// --- implementation ---
+
 void connectWiFi() {
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) delay(500);
+  while (WiFi.status() != WL_CONNECTED) delay(250);
 }
 
-// Login and obtain JWT
 bool login() {
   http.begin(wifiClient, String(apiBaseUrl) + "/auth/login");
   http.addHeader("Content-Type", "application/json");
   StaticJsonDocument<200> req;
   req["email"] = userEmail;
   req["password"] = userPass;
-  String body; serializeJson(req, body);
-  int code = http.POST(body);
+  String b; serializeJson(req, b);
+  int code = http.POST(b);
   if (code == 200 || code == 201) {
     StaticJsonDocument<512> res;
     deserializeJson(res, http.getString());
@@ -62,7 +70,6 @@ bool login() {
   return false;
 }
 
-// Send glucose reading
 bool sendGlucoseReading(double value) {
   http.begin(wifiClient, String(apiBaseUrl) + "/glucose");
   http.addHeader("Content-Type", "application/json");
@@ -72,12 +79,12 @@ bool sendGlucoseReading(double value) {
   String body; serializeJson(doc, body);
   int code = http.POST(body);
   http.end();
-  if (code == 401 && login())
+  if (code == 401 && login()) {
     return sendGlucoseReading(value);
+  }
   return (code == 200 || code == 201);
 }
 
-// Read one raw differential value
 int16_t readDiff() {
   digitalWrite(NIR_LED_PIN, HIGH);
   delay(50);
@@ -85,11 +92,10 @@ int16_t readDiff() {
   digitalWrite(NIR_LED_PIN, LOW);
   delay(50);
   int16_t off = ads.readADC_SingleEnded(0);
-  int16_t diff = on - off;
-  return (diff > 0 ? diff : 0);
+  int16_t d = on - off;
+  return (d > 0 ? d : 0);
 }
 
-// Measure stable glucose
 double measureGlucose() {
   double readings[NUM_READINGS];
   int count = 0, idx = 0;
@@ -97,12 +103,10 @@ double measureGlucose() {
   int spin = 0;
   while (true) {
     int16_t raw = readDiff();
-    double glu = analogToGlucose(raw);
-    readings[idx] = glu;
+    readings[idx] = analogToGlucose(raw);
     if (count < NUM_READINGS) count++;
     idx = (idx + 1) % NUM_READINGS;
 
-    // show spinner
     display.clearDisplay();
     display.setTextSize(1);
     display.setCursor(0,0);
@@ -121,13 +125,12 @@ double measureGlucose() {
     }
     delay(300);
   }
-  // average stable readings
   double sum = 0;
   for (int i = 0; i < NUM_READINGS; i++) sum += readings[i];
   return sum / NUM_READINGS;
 }
 
-void setup() {
+void setup(){
   Serial.begin(115200);
   Wire.begin(OLED_SDA, OLED_SCL);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -142,28 +145,21 @@ void setup() {
 void loop() {
   double glucose = measureGlucose();
 
-  // display result
   display.clearDisplay();
   display.setTextSize(1);
   display.setCursor(0,0);
-  display.print("Current Glucose:");
+  display.print("Current Glu:");
   display.setTextSize(2);
   display.setCursor(0,16);
   display.print(glucose,1);
   display.print(" mg/dL");
+  bool ok = sendGlucoseReading(glucose);
+  display.setTextSize(1);
+  display.setCursor(0,56);
+  display.print(ok ? "Sent ✔" : "Send ✗");
   display.display();
 
-  // serial log
-  Serial.print("Glucose: ");
-  Serial.print(glucose,1);
-  Serial.println(" mg/dL");
-
-  // send to backend
-  if (sendGlucoseReading(glucose)) {
-    Serial.println("Sent successfully");
-  } else {
-    Serial.println("Send failed");
-  }
-
-  delay(5000);
+  Serial.printf("Glucose=%.1f mg/dL  Sent=%s\n",
+                glucose, ok ? "OK" : "FAIL");
+  delay(10000);  // 10 seconds
 }
