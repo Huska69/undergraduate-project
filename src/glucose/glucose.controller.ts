@@ -1,41 +1,32 @@
-import { 
-  Controller, 
-  Post, 
-  Body, 
-  Get,
-  Query,
-  UseGuards,
-  Req
-} from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Controller, Get, Param, Post, Body } from '@nestjs/common';
 import { GlucoseService } from './glucose.service';
-import { CreateGlucoseDto } from './dto/create-glucose.dto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('glucose')
-@UseGuards(JwtAuthGuard)
 export class GlucoseController {
-  constructor(private readonly glucoseService: GlucoseService) {}
+  constructor(
+    private readonly glucoseService: GlucoseService,
+    private readonly prisma: PrismaService
+  ) {}
 
   @Post()
-  async create(
-    @Req() req, 
-    @Body() dto: CreateGlucoseDto
-  ) {
-    const reading = await this.glucoseService.create(req.user.id, dto);
-    return { success: true, reading };
+  async createGlucose(@Body() body: { userId: string; value: number }) {
+    return this.glucoseService.addGlucoseReading(body.userId, body.value);
   }
 
-  @Get()
-  async findAll(
-    @Req() req,
-    @Query('limit') limit: string = '20',
-    @Query('since') since?: string
-  ) {
-    const readings = await this.glucoseService.findAll(
-      req.user.id,
-      Number(limit),
-      since ? new Date(since) : undefined
-    );
-    return { success: true, readings };
+  @Get(':userId/readings')
+  async getUserReadings(@Param('userId') userId: string) {
+    return this.prisma.glucoseReading.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  @Get(':userId/predictions')
+  async getUserPredictions(@Param('userId') userId: string) {
+    return this.prisma.predictedGlucose.findMany({
+      where: { userId },
+      orderBy: { predictedFor: 'asc' },
+    });
   }
 }

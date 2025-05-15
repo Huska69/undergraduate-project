@@ -21,9 +21,9 @@ export class PredictionsService {
     @InjectModel(Prediction.name) private predictionModel: Model<Prediction>,
     private configService: ConfigService,
   ) {
-    this.modelApiUrl = this.configService.get<string>(
+    this.modelApiUrl = this.configService.post<string>(
       'MODEL_API_URL',
-      'http://localhost:8000',
+      'http://localhost:5000/predict',
     );
   }
 
