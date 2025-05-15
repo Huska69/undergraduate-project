@@ -4,45 +4,57 @@ import axios from 'axios';
 
 @Injectable()
 export class GlucoseService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async addGlucoseReading(userId: string, value: number) {
     // 1. Store the new reading
-    const newReading = await this.prisma.glucoseReading.create({
+    const reading = await this.prisma.glucoseReading.create({
       data: { userId, value },
     });
 
-    // 2. Fetch user's past readings
+    // 2. Fetch recent readings (last 30 for example)
     const history = await this.prisma.glucoseReading.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
-      select: { value: true },
+      take: 30, // Adjust based on your model's needs
     });
 
-    const values = history.map(r => r.value);
+    const values = history.map((r) => r.value);
 
-    // 3. Call the prediction API
-    const response = await axios.post('http://localhost:5000/predict', {
-      values: values,
-    });
+    // 3. Call prediction API
+    try {
+      const response = await axios.post('http://localhost:5000/predict', {
+        glucose_levels: values,
+      });
 
-    const predictions = response.data.predictions;
+      const predictions = response.data.predictions; // Assume this is an array of { time, value }
 
-    // 4. Store predicted values
-    for (const p of predictions) {
-      await this.prisma.predictedGlucose.create({
-        data: {
+      // 4. Store predictions in DB
+      await this.prisma.predictedGlucose.createMany({
+        data: predictions.map((p) => ({
           userId,
           value: p.value,
-          predictedFor: new Date(p.timestamp),
-        },
+          predictedFor: new Date(p.time),
+        })),
       });
+    } catch (err) {
+      console.error('Prediction API error:', err.message);
     }
 
-    return {
-      message: 'Glucose reading and predictions stored.',
-      newReading,
-      predictions,
-    };
+    return reading;
+  }
+
+  async getReadings(userId: string) {
+    return this.prisma.glucoseReading.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async getPredictions(userId: string) {
+    return this.prisma.predictedGlucose.findMany({
+      where: { userId },
+      orderBy: { predictedFor: 'asc' },
+    });
   }
 }
