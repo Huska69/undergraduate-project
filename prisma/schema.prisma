@@ -26,6 +26,7 @@ model User {
   meds      String?
   chats Chat[]
   glucoseReadings GlucoseReading[]
+  predictedGlucose PredictedGlucose[]
 }
 
 model Chat {
@@ -63,3 +64,4 @@ model PredictedGlucose {
   predictedFor DateTime
   createdAt    DateTime @default(now())
 }
+
