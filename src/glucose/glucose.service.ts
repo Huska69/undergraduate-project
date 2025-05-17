@@ -23,7 +23,7 @@ export class GlucoseService {
 
     // 3. Call prediction API
     try {
-      const response = await axios.post('http://localhost:5000/predict', {
+      const response = await axios.post('https://lstm-model-9u1y.onrender.com/predict', {
         glucose_levels: values,
       });
 
