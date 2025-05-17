@@ -15,7 +15,7 @@ export class GlucoseService {
     // 2. Fetch recent readings (last 30 for example)
     const history = await this.prisma.glucoseReading.findMany({
       where: { userId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { timestamp: 'asc' },
       take: 30, // Adjust based on your model's needs
     });
 
@@ -47,7 +47,7 @@ export class GlucoseService {
   async getReadings(userId: string) {
     return this.prisma.glucoseReading.findMany({
       where: { userId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { timestamp: 'asc' },
     });
   }
 
