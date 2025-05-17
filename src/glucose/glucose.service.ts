@@ -24,10 +24,10 @@ export class GlucoseService {
     // 3. Call prediction API
     try {
       const response = await axios.post('https://lstm-model-9u1y.onrender.com/predict', {
-        glucose_levels: values,
+        values,
       });
 
-      const predictions = response.data.predictions; // Assume this is an array of { time, value }
+      const predictions = response.data.predicted.predictions; // Assume this is an array of { time, value }
 
       // 4. Store predictions in DB
       await this.prisma.predictedGlucose.createMany({
