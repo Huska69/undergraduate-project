@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { GlucoseService } from './glucose.service';
 
 @Controller('glucose')
@@ -20,5 +20,10 @@ export class GlucoseController {
   @Get(':userId/predictions')
   async getPredictions(@Param('userId') userId: string) {
     return this.glucoseService.getPredictions(userId);
+  }
+
+  @Delete('predictions/:userId')
+  async clearPredictionsForUser(@Param('userId') userId: string) {
+    return this.glucoseService.clearPredictions(userId);
   }
 }

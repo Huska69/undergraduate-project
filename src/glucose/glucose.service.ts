@@ -78,4 +78,10 @@ export class GlucoseService {
       orderBy: { predictedFor: 'asc' },
     });
   }
+
+  async clearPredictions(userId?: string) {
+    return this.prisma.predictedGlucose.deleteMany({
+      where: userId ? { userId } : {}
+    });
+  }
 }
