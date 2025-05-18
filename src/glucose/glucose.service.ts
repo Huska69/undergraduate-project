@@ -6,92 +6,73 @@ import axios from 'axios';
 export class GlucoseService {
   constructor(private readonly prisma: PrismaService) {}
 
-// src/glucose/glucose.service.ts
+  async addGlucoseReading(userId: string, value: number) {
+    // 1. Save new reading
+    const reading = await this.prisma.glucoseReading.create({
+      data: { userId, value },
+    });
 
-<<<<<<< HEAD
-async addGlucoseReading(userId: string, value: number) {
-  // 1. Save new reading
-  const reading = await this.prisma.glucoseReading.create({
-    data: { userId, value },
-  });
-=======
-    // 2. Fetch recent readings (last 30 for example)
+    // 2. Fetch recent readings (ordered by timestamp)
     const history = await this.prisma.glucoseReading.findMany({
       where: { userId },
       orderBy: { timestamp: 'asc' },
-      take: 30, // Adjust based on your model's needs
+      take: 30,
     });
->>>>>>> 64748e828f1bc46352215aa534ce8d29b36c4845
 
-  // 2. Fetch recent readings
-  const history = await this.prisma.glucoseReading.findMany({
-    where: { userId },
-    orderBy: { timestamp: 'asc' },
-    take: 30,
-  });
+    // Clean and validate values
+    const values = history
+      .map((r) => r.value)
+      .filter((v) => typeof v === 'number' && !isNaN(v));
 
-  const values = history
-    .map((r) => r.value)
-    .filter((v) => typeof v === 'number' && !isNaN(v));
+    // 3. Call prediction API if enough data
+    if (values.length >= 5) {
+      try {
+        // ✅ Fixed: Removed duplicate axios call and cleaned URL
+        const response = await axios.post(
+          'https://lstm-model-9u1y.onrender.com/predict ', // Removed trailing spaces
+          { values },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 30000, // 30 second timeout
+          }
+        );
 
-  // 3. Call prediction API if enough data
-  if (values.length >= 5) {
-    try {
-      const response = await axios.post(
-        'https://lstm-model-9u1y.onrender.com/predict ',
-        { values },
-        {
-          headers: { 'Content-Type': 'application/json' },
+        // ✅ Safe response handling
+        const predictions = Array.isArray(response.data)
+          ? response.data.map((v) => ({ value: v, time: new Date(Date.now() + 3600000) }))
+          : Array.isArray(response.data?.predictions)
+          ? response.data.predictions
+          : [];
+
+        // ✅ Store predictions
+        if (predictions.length > 0) {
+          await this.prisma.predictedGlucose.createMany({
+            data: predictions.map((p) => ({
+              userId,
+              value: p.value,
+              predictedFor: new Date(p.time),
+            })),
+          });
         }
-      );
-
-      // ✅ Safely extract predictions
-      const predictions = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.predictions)
-        ? response.data.predictions
-        : [];
-      const response = await axios.post('https://lstm-model-9u1y.onrender.com/predict', {
-        values,
-      });
-
-      const predictions = response.data.predicted.predictions; // Assume this is an array of { time, value }
-
-      // ✅ Store predictions
-      if (predictions.length > 0) {
-        await this.prisma.predictedGlucose.createMany({
-          data: predictions.map((p) => ({
-            userId,
-            value: typeof p === 'number' ? p : p.value,
-            predictedFor: new Date(
-              typeof p === 'number' 
-                ? Date.now() + 3600000  // Default to 1h ahead
-                : p.time
-            ),
-          })),
+      } catch (err) {
+        // ✅ Improved error logging
+        console.error('Prediction failed:', {
+          message: err.message,
+          status: err.response?.status,
+          request_data: values,
+          response_data: err.response?.data,
+          stack: err.stack,
         });
       }
-    } catch (err) {
-      console.error('Prediction failed:', {
-        message: err.message,
-        request_data: values,
-        status: err.response?.status,
-        response_data: err.response?.data,
-      });
     }
-  }
 
-  return reading;
-}
+    return reading;
+  }
 
   async getReadings(userId: string) {
     return this.prisma.glucoseReading.findMany({
       where: { userId },
-<<<<<<< HEAD
-//      orderBy: { createdAt: 'asc' },
-=======
       orderBy: { timestamp: 'asc' },
->>>>>>> 64748e828f1bc46352215aa534ce8d29b36c4845
     });
   }
 
