@@ -7,37 +7,31 @@ export class GlucoseService {
   constructor(private readonly prisma: PrismaService) {}
 
   async addGlucoseReading(userId: string, value: number) {
-    // 1. Save new reading
     const reading = await this.prisma.glucoseReading.create({
       data: { userId, value },
     });
 
-    // 2. Fetch recent readings (ordered by timestamp)
     const history = await this.prisma.glucoseReading.findMany({
       where: { userId },
       orderBy: { timestamp: 'asc' },
       take: 30,
     });
 
-    // Clean and validate values
     const values = history
       .map((r) => r.value)
       .filter((v) => typeof v === 'number' && !isNaN(v));
 
-    // 3. Call prediction API if enough data
     if (values.length >= 5) {
       try {
-        // ✅ Fixed: Removed duplicate axios call and cleaned URL
         const response = await axios.post(
-          'https://lstm-model-9u1y.onrender.com/predict ', // Removed trailing spaces
+          'https://lstm-model-9u1y.onrender.com/predict ', 
           { values },
           {
             headers: { 'Content-Type': 'application/json' },
-            timeout: 30000, // 30 second timeout
+            timeout: 30000,
           }
         );
 
-        // ✅ Safe response handling
         const predictions = Array.isArray(response.data)
           ? response.data.map((v) => ({ value: v, time: new Date(Date.now() + 3600000) }))
           : Array.isArray(response.data?.predictions)
@@ -55,7 +49,6 @@ export class GlucoseService {
           });
         }
       } catch (err) {
-        // ✅ Improved error logging
         console.error('Prediction failed:', {
           message: err.message,
           status: err.response?.status,
