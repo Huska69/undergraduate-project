@@ -6,48 +6,74 @@ import axios from 'axios';
 export class GlucoseService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async addGlucoseReading(userId: string, value: number) {
-    // 1. Store the new reading
-    const reading = await this.prisma.glucoseReading.create({
-      data: { userId, value },
-    });
+// src/glucose/glucose.service.ts
 
-    // 2. Fetch recent readings (last 30 for example)
-    const history = await this.prisma.glucoseReading.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'asc' },
-      take: 30, // Adjust based on your model's needs
-    });
+async addGlucoseReading(userId: string, value: number) {
+  // 1. Save new reading
+  const reading = await this.prisma.glucoseReading.create({
+    data: { userId, value },
+  });
 
-    const values = history.map((r) => r.value);
+  // 2. Fetch recent readings
+  const history = await this.prisma.glucoseReading.findMany({
+    where: { userId },
+    orderBy: { timestamp: 'asc' },
+    take: 30,
+  });
 
-    // 3. Call prediction API
+  const values = history
+    .map((r) => r.value)
+    .filter((v) => typeof v === 'number' && !isNaN(v));
+
+  // 3. Call prediction API if enough data
+  if (values.length >= 5) {
     try {
-      const response = await axios.post('http://localhost:5000/predict', {
-        glucose_levels: values,
-      });
+      const response = await axios.post(
+        'https://lstm-model-9u1y.onrender.com/predict ',
+        { values },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
-      const predictions = response.data.predictions; // Assume this is an array of { time, value }
+      // ✅ Safely extract predictions
+      const predictions = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.predictions)
+        ? response.data.predictions
+        : [];
 
-      // 4. Store predictions in DB
-      await this.prisma.predictedGlucose.createMany({
-        data: predictions.map((p) => ({
-          userId,
-          value: p.value,
-          predictedFor: new Date(p.time),
-        })),
-      });
+      // ✅ Store predictions
+      if (predictions.length > 0) {
+        await this.prisma.predictedGlucose.createMany({
+          data: predictions.map((p) => ({
+            userId,
+            value: typeof p === 'number' ? p : p.value,
+            predictedFor: new Date(
+              typeof p === 'number' 
+                ? Date.now() + 3600000  // Default to 1h ahead
+                : p.time
+            ),
+          })),
+        });
+      }
     } catch (err) {
-      console.error('Prediction API error:', err.message);
+      console.error('Prediction failed:', {
+        message: err.message,
+        request_data: values,
+        status: err.response?.status,
+        response_data: err.response?.data,
+      });
     }
-
-    return reading;
   }
+
+  return reading;
+}
 
   async getReadings(userId: string) {
     return this.prisma.glucoseReading.findMany({
       where: { userId },
-      orderBy: { createdAt: 'asc' },
+//      orderBy: { createdAt: 'asc' },
     });
   }
 

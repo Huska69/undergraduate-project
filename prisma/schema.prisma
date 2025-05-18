@@ -64,3 +64,18 @@ model PredictedGlucose {
   predictedFor DateTime
   createdAt    DateTime @default(now())
 }
+
+model Food {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  giValue     Int      // Glycemic Index
+  mealType    String   // "breakfast", "lunch", "dinner", "snack"
+  imageUrl    String
+  recipeLink  String
+  calories    Int
+  protein     Float
+  fat         Float
+  sugar       Float
+  allergens   String[] // e.g., ["nuts", "dairy"]
+  tags        String[] // e.g., ["vegetarian", "low-carb"]
+}

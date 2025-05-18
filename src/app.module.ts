@@ -6,6 +6,8 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ChatModule } from './chat/chat.module';
 import { GlucoseModule } from './glucose/glucose.module';
+import { RecommendationController } from 'src/recommendation/recommendation.controller';
+import { RecommendationService } from 'src/recommendation/recommendation.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { GlucoseModule } from './glucose/glucose.module';
     ChatModule,
     GlucoseModule
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, RecommendationController], 
+  providers: [AppService, RecommendationService],
 })
 export class AppModule {}
