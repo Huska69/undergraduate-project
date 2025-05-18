@@ -26,7 +26,7 @@ model User {
   meds             String?
   chats            Chat[]
   glucoseReadings  GlucoseReading[]
-  predictedGlucose PredictedGlucose[]
+  // predictedGlucose PredictedGlucose[]
 }
 
 model Chat {
@@ -59,9 +59,8 @@ model GlucoseReading {
 model PredictedGlucose {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   userId       String   @db.ObjectId
-  user         User     @relation(fields: [userId], references: [id])
   value        Float
-  predictedFor DateTime
+  predictedFor DateTime @map("timestamp") // Matches API field name
   createdAt    DateTime @default(now())
 }
 

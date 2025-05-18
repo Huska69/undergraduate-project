@@ -19,44 +19,47 @@ export class GlucoseService {
 
     const values = history
       .map((r) => r.value)
-      .filter((v) => typeof v === 'number' && !isNaN(v));
+      .filter((v) => typeof v === 'number' && !isNaN(v))
+      .slice(-5); // ✅ Only use last 5 values
 
     if (values.length >= 5) {
-      try {
-        const response = await axios.post(
-          'https://lstm-model-9u1y.onrender.com/predict ', 
-          { values },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 30000,
-          }
-        );
+        try {
+    const apiUrl = 'https://lstm-model-9u1y.onrender.com/predict';
+    console.log(`Calling prediction API at ${apiUrl} with ${values.length} values`);
 
-        const predictions = Array.isArray(response.data)
-          ? response.data.map((v) => ({ value: v, time: new Date(Date.now() + 3600000) }))
-          : Array.isArray(response.data?.predictions)
-          ? response.data.predictions
-          : [];
-
-        // ✅ Store predictions
-        if (predictions.length > 0) {
-          await this.prisma.predictedGlucose.createMany({
-            data: predictions.map((p) => ({
-              userId,
-              value: p.value,
-              predictedFor: new Date(p.time),
-            })),
-          });
-        }
-      } catch (err) {
-        console.error('Prediction failed:', {
-          message: err.message,
-          status: err.response?.status,
-          request_data: values,
-          response_data: err.response?.data,
-          stack: err.stack,
-        });
+    const response = await axios.post(
+      apiUrl,
+      { values },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000, // ✅ Increased timeout
       }
+    );
+
+    console.log('Raw API response:', response.data); // ✅ Log full response
+
+    const predictions = Array.isArray(response.data?.predicted?.predictions)
+      ? response.data.predicted.predictions
+      : [];
+
+    if (predictions.length > 0) {
+      await this.prisma.predictedGlucose.createMany({
+        data: predictions.map((p) => ({
+          userId,
+          value: p.value,
+          predictedFor: new Date(p.timestamp),
+        })),
+      });
+      console.log(`✅ Saved ${predictions.length} predictions`);
+    }
+  } catch (err) {
+    console.error('🚨 Prediction failed:', {
+      message: err.message,
+      status: err.response?.status,
+      response_data: err.response?.data,
+      stack: err.stack,
+    });
+  }
     }
 
     return reading;
