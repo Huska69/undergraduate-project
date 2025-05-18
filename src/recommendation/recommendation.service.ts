@@ -3,17 +3,24 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FoodDto } from './dto/food.dto';
 
+// src/recommendation/recommendation.service.ts
+
 @Injectable()
 export class RecommendationService {
   constructor(private prisma: PrismaService) {}
 
-  async getRecommendations(userId: string): Promise<{ recommendations: FoodDto[] }> {
-    // Step 1: Get user
+  async getRecommendations(userId: string, trend: string): Promise<{ recommendations: FoodDto[] }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        glucoseReadings: { orderBy: { timestamp: 'desc' }, take: 1 },
-        predictedGlucose: { orderBy: { predictedFor: 'desc' }, take: 1 },
+        glucoseReadings: {
+          orderBy: { timestamp: 'desc' },
+          take: 1,
+        },
+        predictedGlucose: {
+          orderBy: { predictedFor: 'desc' },
+          take: 1,
+        },
       },
     });
 
@@ -24,19 +31,16 @@ export class RecommendationService {
     const latestReading = user.glucoseReadings[0];
     const latestPrediction = user.predictedGlucose[0];
 
-    // Step 2: Determine trend
     const isTrendUp = latestPrediction.value > latestReading.value;
     const [giMin, giMax] = isTrendUp ? [0, 55] : [56, 70];
-
-    // Step 3: Get user-specific filters
     const userAllergens = (user.allergies || '').split(',').map(a => a.trim());
 
-    // Step 4: Get 3 foods each for breakfast, lunch, dinner + 4 snacks
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     const recommendations: FoodDto[] = [];
 
     for (const mealType of mealTypes) {
       const count = mealType === 'snack' ? 4 : 3;
+
       const foods = await this.prisma.food.findMany({
         where: {
           giValue: { gte: giMin, lte: giMax },
@@ -58,13 +62,12 @@ export class RecommendationService {
           fat: food.fat,
           sugar: food.sugar,
         },
-        // Remove top-level nutrition fields
         calories: undefined,
         protein: undefined,
         fat: undefined,
         sugar: undefined,
       }));
-      
+
       recommendations.push(...mappedFoods);
     }
 
