@@ -8,11 +8,20 @@ export class GlucoseService {
 
 // src/glucose/glucose.service.ts
 
+<<<<<<< HEAD
 async addGlucoseReading(userId: string, value: number) {
   // 1. Save new reading
   const reading = await this.prisma.glucoseReading.create({
     data: { userId, value },
   });
+=======
+    // 2. Fetch recent readings (last 30 for example)
+    const history = await this.prisma.glucoseReading.findMany({
+      where: { userId },
+      orderBy: { timestamp: 'asc' },
+      take: 30, // Adjust based on your model's needs
+    });
+>>>>>>> 64748e828f1bc46352215aa534ce8d29b36c4845
 
   // 2. Fetch recent readings
   const history = await this.prisma.glucoseReading.findMany({
@@ -42,6 +51,11 @@ async addGlucoseReading(userId: string, value: number) {
         : Array.isArray(response.data?.predictions)
         ? response.data.predictions
         : [];
+      const response = await axios.post('https://lstm-model-9u1y.onrender.com/predict', {
+        values,
+      });
+
+      const predictions = response.data.predicted.predictions; // Assume this is an array of { time, value }
 
       // ✅ Store predictions
       if (predictions.length > 0) {
@@ -73,7 +87,11 @@ async addGlucoseReading(userId: string, value: number) {
   async getReadings(userId: string) {
     return this.prisma.glucoseReading.findMany({
       where: { userId },
+<<<<<<< HEAD
 //      orderBy: { createdAt: 'asc' },
+=======
+      orderBy: { timestamp: 'asc' },
+>>>>>>> 64748e828f1bc46352215aa534ce8d29b36c4845
     });
   }
 
