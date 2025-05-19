@@ -11,7 +11,6 @@ export class GlucoseController {
   ) {
     return this.glucoseService.addGlucoseReading(body.userId, body.value);
   }
-
   @Get(':userId/readings')
   async getReadings(@Param('userId') userId: string) {
     return this.glucoseService.getReadings(userId);
