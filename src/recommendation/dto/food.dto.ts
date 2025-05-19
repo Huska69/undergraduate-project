@@ -1,4 +1,26 @@
 // src/recommendation/dto/food.dto.ts
+
+class NutritionDto {
+  calories?: number;
+  protein?: number;
+  fat?: number;
+  sugar?: number;
+}
+
+export class CreateFoodDto {
+  name: string;
+  giValue: number;
+  mealType: string;
+  imageUrl: string;
+  recipeLink: string;
+  calories: number;
+  protein: number;
+  fat: number;
+  sugar: number;
+  allergens: string[];
+  tags: string[];
+}
+
 export class FoodDto {
   id: string;
   name: string;
@@ -6,12 +28,12 @@ export class FoodDto {
   mealType: string;
   imageUrl: string;
   recipeLink: string;
-  nutrition: {
-    calories?: number;   // Optional for flexibility
-    protein?: number;
-    fat?: number;
-    sugar?: number;
-  };
+  nutrition: NutritionDto;
   allergens: string[];
   tags: string[];
+}
+
+export class RecommendationResponseDto {
+  recommendations: FoodDto[];
+  glucoseTrend: string;
 }
