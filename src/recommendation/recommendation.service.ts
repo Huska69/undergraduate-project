@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FoodDto } from './dto/food.dto';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 @Injectable()
 export class RecommendationService {
@@ -18,20 +19,14 @@ export class RecommendationService {
     });
 
     if (!user || !user.glucoseReadings.length || !user.predictedGlucose.length) {
-      throw new Error('Missing glucose data');
+      throw new HttpException('Missing glucose data', HttpStatus.NOT_FOUND);
     }
 
     const latestReading = user.glucoseReadings[0];
     const latestPrediction = user.predictedGlucose[0];
-
-    // Step 2: Determine trend
     const isTrendUp = latestPrediction.value > latestReading.value;
     const [giMin, giMax] = isTrendUp ? [0, 55] : [56, 70];
-
-    // Step 3: Get user-specific filters
     const userAllergens = (user.allergies || '').split(',').map(a => a.trim());
-
-    // Step 4: Get 3 foods each for breakfast, lunch, dinner + 4 snacks
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
     const recommendations: FoodDto[] = [];
 

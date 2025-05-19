@@ -1,5 +1,5 @@
-// src/recommendation/recommendation.controller.ts
-import { Controller, Get, Query, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { RecommendationService } from './recommendation.service';
 
 @Controller('recommendations')
@@ -7,18 +7,11 @@ export class RecommendationController {
   constructor(private readonly recommendationService: RecommendationService) {}
 
   @Get()
-  async getRecommendations(@Query('userId') userId: string) {
+  async getRecommendations(@Req() req: Request) {
+    const userId = req.user?.['userId']; // From JWT
     if (!userId) {
-      throw new HttpException('userId required', HttpStatus.BAD_REQUEST);
+      throw new Error('User ID not found in request');
     }
-
-    try {
-      return await this.recommendationService.getRecommendations(userId);
-    } catch (error) {
-      throw new HttpException(
-        `Failed to generate recommendations: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
+    return this.recommendationService.getRecommendations(userId);
   }
 }
